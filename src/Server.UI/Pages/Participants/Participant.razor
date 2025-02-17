@@ -187,6 +187,9 @@
                             <MudTabPanel Text="Audit">
                                 <ParticipantAudit Id="@Id" />
                             </MudTabPanel>
+                            <MudTabPanel Text="QA">
+                                <CaseEnrolmentQa ParticipantId="@Id"/>
+                            </MudTabPanel>
                         }
                         @*
                         <MudTabPanel Text="Contact Log" Disabled></MudTabPanel>

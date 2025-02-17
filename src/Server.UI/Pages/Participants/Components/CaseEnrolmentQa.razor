@@ -1,0 +1,37 @@
+@using Cfo.Cats.Application.Features.QualityAssurance.DTOs
+@using Humanizer
+
+@if (Model is not null)
+{
+    <MudTable T="EnrolmentQueueEntryDto" Items="Model.Pqa">
+        <HeaderContent>
+            <MudTh>Created</MudTh>
+            <MudTh>Created By</MudTh>
+            <MudTh>Is Accepted</MudTh>
+            <MudTh>Is Completed</MudTh>
+            <MudTh>Processed By</MudTh>
+            <MudTh>Tenant Name</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Created.Humanize()</MudTd>
+            <MudTd>@context.SupportWorker</MudTd>
+            <MudTd>@context.IsAccepted</MudTd>
+            <MudTd>@context.IsCompleted</MudTd>
+            <MudTd>@context.AssignedTo</MudTd>
+            <MudTd>@context.TenantName</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+
+
+
+@code {
+
+    private ParticipantEnrolmentDto? Model { get; set; } = null;
+    
+    
+    [Parameter, EditorRequired]
+    public required string ParticipantId { get; set; }
+    
+}
