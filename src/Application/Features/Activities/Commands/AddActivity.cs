@@ -1,4 +1,3 @@
-using Cfo.Cats.Application.Common.Interfaces;
 using Cfo.Cats.Application.Common.Security;
 using Cfo.Cats.Application.Common.Validators;
 using Cfo.Cats.Application.Features.Activities.DTOs;
@@ -8,8 +7,6 @@ using Cfo.Cats.Domain.Entities.Activities;
 using Cfo.Cats.Domain.Entities.Documents;
 using Humanizer.Bytes;
 using Microsoft.AspNetCore.Components.Forms;
-using System.Linq.Dynamic.Core.Tokenizer;
-using System.Threading;
 
 namespace Cfo.Cats.Application.Features.Activities.Commands;
 
@@ -84,8 +81,7 @@ public static class AddActivity
     }
 
     class Handler(
-        IUnitOfWork unitOfWork, 
-        ICurrentUserService currentUserService, 
+        IUnitOfWork unitOfWork,         
         IUploadService uploadService,
         IMapper mapper) : IRequestHandler<Command, Result>
     {
@@ -120,7 +116,7 @@ public static class AddActivity
             {
                 return Result.Failure("Task not found");
             }
-
+                        
             var cxt = new Activity.ActivityContext(
                 Definition: request.Definition!,
                 ParticipantId: participant.Id,
@@ -131,9 +127,10 @@ public static class AddActivity
                 ParticipantCurrentContract: participant.CurrentLocation.Contract,
                 ParticipantStatus: participant.EnrolmentStatus!,
                 CommencedOn: request.CommencedOn!.Value,
-                currentUserService.TenantId!,
-                currentUserService.UserId!,
-                AdditionalInformation: request.AdditionalInformation);
+                TenantId: participant.Owner?.TenantId ?? string.Empty,
+                OwnerId: participant.OwnerId ?? string.Empty,                
+                AdditionalInformation: request.AdditionalInformation                
+                );
 
             var classification = request.Definition!.Classification;
 
@@ -287,7 +284,6 @@ public static class AddActivity
                             .MustAsync(BePdfFile)
                             .WithMessage("File is not a PDF");
                 });
-
             });
         }
 
@@ -296,7 +292,6 @@ public static class AddActivity
             var activity = unitOfWork.DbContext.Activities.Single(a => a.Id == activityId);
             return activity.Definition == definition;
         }
-
 
         private bool BeInPendingStatus(Guid? activityId)
         {
@@ -343,6 +338,7 @@ public static class AddActivity
         }
 
         bool NotBeCompletedInTheFuture(DateTime? completed) => completed < DateTime.UtcNow;
+
         private bool HaveOccurredOnOrAfterConsentWasGranted(string participantId, DateTime? commencedOn)
         {
             if(commencedOn is null)
