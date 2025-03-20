@@ -8,18 +8,16 @@ using Cfo.Cats.Domain.Entities.Documents;
 using Cfo.Cats.Domain.Entities.Participants;
 using Cfo.Cats.Domain.Entities.Bios;
 using Cfo.Cats.Domain.Identity;
-using Cfo.Cats.Infrastructure.Persistence.Configurations.Enrolments;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Cfo.Cats.Domain.Entities.Inductions;
 using Cfo.Cats.Domain.Entities.Notifications;
-using Cfo.Cats.Infrastructure.Persistence.Configurations.ManagementInformation;
 using Cfo.Cats.Domain.Entities.ManagementInformation;
 using Cfo.Cats.Domain.Entities.PRIs;
 
 namespace Cfo.Cats.Infrastructure.Persistence;
 
 #nullable disable
-public class ApplicationDbContext
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : IdentityDbContext<
         ApplicationUser,
         ApplicationRole,
@@ -28,14 +26,10 @@ public class ApplicationDbContext
         ApplicationUserRole,
         UserLogin,
         ApplicationRoleClaim,
-        ApplicationUserToken
-    >,
+        ApplicationUserToken>(options),
         IApplicationDbContext,
         IDataProtectionKeyContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options) { }
-
     public DbSet<Tenant> Tenants => Set<Tenant>();
 
     public DbSet<AuditTrail> AuditTrails => Set<AuditTrail>();
@@ -113,7 +107,6 @@ public class ApplicationDbContext
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-
         builder.ApplyGlobalFilters<ISoftDelete>(s => s.Deleted == null);
     }
 

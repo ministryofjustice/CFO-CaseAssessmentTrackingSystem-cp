@@ -8,7 +8,11 @@ public class ApplicationDbContextInitializer(ILogger<ApplicationDbContextInitial
     {
         try
         {
-            await context.Database.MigrateAsync();
+            if (context.Database.IsRelational())
+            {
+                await context.Database.MigrateAsync();
+            }
+
             if (await context.DateDimensions.AnyAsync() == false)
             {
                 // this is not the best. But only runs in dev.
