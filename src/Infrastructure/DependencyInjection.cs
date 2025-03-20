@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Quartz;
 using Quartz.AspNetCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -106,16 +107,34 @@ public static class DependencyInjection
     {
         services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();        
 
-        services.AddDbContext<ApplicationDbContext>(
-            (p, m) => {
-                m.AddInterceptors(p.GetServices<ISaveChangesInterceptor>());
-                m.UseSqlServer(configuration.GetConnectionString("CatsDb")!);
-            });
+        services.AddDbContext<ApplicationDbContext>((serviceProvider, optionsBuilder) => 
+        {
+            optionsBuilder.AddInterceptors(serviceProvider.GetServices<ISaveChangesInterceptor>());
+
+            if (configuration.GetValue<bool>("UseInMemoryDatabase"))
+            {
+                optionsBuilder.UseInMemoryDatabase("CatsDb");
+            }
+            else
+            {
+                optionsBuilder.UseSqlServer(configuration.GetConnectionString("CatsDb")!);
+            }
+
+        });
         
         services.AddDbContextFactory<ApplicationDbContext>((serviceProvider, optionsBuilder) =>
         {
             optionsBuilder.AddInterceptors(serviceProvider.GetServices<ISaveChangesInterceptor>());
-            optionsBuilder.UseSqlServer(configuration.GetConnectionString("CatsDb")!);
+
+            if(configuration.GetValue<bool>("UseInMemoryDatabase"))
+            {
+                optionsBuilder.UseInMemoryDatabase("CatsDb");
+            }
+            else
+            {
+                optionsBuilder.UseSqlServer(configuration.GetConnectionString("CatsDb")!);
+            }
+
         }, ServiceLifetime.Scoped);
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
