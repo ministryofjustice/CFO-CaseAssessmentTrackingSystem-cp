@@ -20,11 +20,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            - name: DATABASE_ENDPOINT
+            - name: DATABASE_ADDRESS
               valueFrom:
                 secretKeyRef:
                   name: rds-mssql-instance-output
-                  key: rds_instance_endpoint
+                  key: rds_instance_address
             - name: DATABASE_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -38,6 +38,6 @@ spec:
             - name: DOTNET_ENVIRONMENT
               value: "Development"
             - name: ConnectionStrings__CatsDb
-              value: "Server=$(DATABASE_ENDPOINT);Database=CatsDb;User Id=$(DATABASE_USERNAME);Password=$(DATABASE_PASSWORD);TrustServerCertificate=True;"
+              value: "Server=$(DATABASE_ADDRESS);Database=CatsDb;User Id=$(DATABASE_USERNAME);Password=$(DATABASE_PASSWORD);TrustServerCertificate=True;"
             - name: ConnectionStrings__rabbit
               value: "InMemory"
