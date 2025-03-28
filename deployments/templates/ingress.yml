@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cats-ingress
+  annotations:
+    external-dns.alpha.kubernetes.io/set-identifier: cats-ingress-${NAMESPACE}-green
+    external-dns.alpha.kubernetes.io/aws-weight: "100"
+    
+spec:
+  ingressClassName: default
+  tls:
+    - hosts:
+        - ${NAMESPACE}.live.cloud-platform.service.justice.gov.uk
+  rules:
+    - host: ${NAMESPACE}.live.cloud-platform.service.justice.gov.uk
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: cats-service # this should match the metadata.name in service.yml
+                port:
+                  number: 8080
