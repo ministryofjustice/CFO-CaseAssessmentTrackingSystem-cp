@@ -91,7 +91,7 @@ public static class DependencyInjection
             options.HandshakeTimeout = TimeSpan.FromSeconds(60); // Adjust as needed
             options.KeepAliveInterval = TimeSpan.FromSeconds(10); // SignalR keep-alive interval
             options.ClientTimeoutInterval = TimeSpan.FromSeconds(120); // SignalR client timeout interval
-        }).AddStackExchangeRedis(config.GetConnectionString("Redis")!);
+        });//.AddStackExchangeRedis(config.GetConnectionString("Redis")!);
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
