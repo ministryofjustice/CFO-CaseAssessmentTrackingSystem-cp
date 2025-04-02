@@ -5,7 +5,7 @@ metadata:
   labels:
     app: cats
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: cats # this should match the selector in service.yml
@@ -55,11 +55,11 @@ spec:
               value: "Development"
             - name: ConnectionStrings__CatsDb
               value: "Server=$(DATABASE_ADDRESS);Database=CatsDb;User Id=$(DATABASE_USERNAME);Password=$(DATABASE_PASSWORD);TrustServerCertificate=True;"
-            - name: ConnectionStrings__rabbit
-              value: "InMemory"
             - name: ConnectionStrings__Redis
               value: "$(REDIS_ADDRESS):6379,password=$(REDIS_AUTH_TOKEN),ssl=true"
             - name: UseDummyCandidateService
               value: "true"
             - name: AWS__Bucket
               value: "$(S3_BUCKET_NAME)"
+            - name: MassTransit__Transport
+              value: "AmazonSqs"
