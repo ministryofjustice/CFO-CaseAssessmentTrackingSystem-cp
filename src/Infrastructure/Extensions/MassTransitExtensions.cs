@@ -77,15 +77,16 @@ public static class MassTransitExtensions
             // Use "default" SDK configuration
         });
 
+
         // Configure topics
-        cfg.Message<ActivityApprovedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-9d0a123dedcdc30d3a6dc3dd142a63f3.fifo"));
-        cfg.Message<HubInductionCreatedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-3c88c879923a967e8fa7323fdf97ef6d.fifo"));
-        cfg.Message<ObjectiveTaskCompletedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-3abc996c60465a3612055d7eea3fa4e0.fifo"));
-        cfg.Message<ParticipantTransitionedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-35ac474a94cf42adb6ed59d1b28079df.fifo"));
-        cfg.Message<PRIAssignedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-9c81b968c997a4d6d4fcf8001571e570.fifo"));
-        cfg.Message<PRIThroughTheGateCompletedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-1c9a14cee6aaacfe83381c8809b444e2.fifo"));
-        cfg.Message<SyncParticipantCommand>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-c06851029602fd08a735064924f8ae1b.fifo"));
-        cfg.Message<WingInductionCreatedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-f7d5d3cc77fc4d96b80d029c90c88d34.fifo"));
+        //cfg.Message<ActivityApprovedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-9d0a123dedcdc30d3a6dc3dd142a63f3.fifo"));
+        //cfg.Message<HubInductionCreatedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-3c88c879923a967e8fa7323fdf97ef6d.fifo"));
+        //cfg.Message<ObjectiveTaskCompletedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-3abc996c60465a3612055d7eea3fa4e0.fifo"));
+        //cfg.Message<ParticipantTransitionedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-35ac474a94cf42adb6ed59d1b28079df.fifo"));
+        //cfg.Message<PRIAssignedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-9c81b968c997a4d6d4fcf8001571e570.fifo"));
+        //cfg.Message<PRIThroughTheGateCompletedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-1c9a14cee6aaacfe83381c8809b444e2.fifo"));
+        //cfg.Message<SyncParticipantCommand>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-c06851029602fd08a735064924f8ae1b.fifo"));
+        //cfg.Message<WingInductionCreatedIntegrationEvent>(cfg => cfg.SetEntityName("cloud-platform-hmpps-co-financing-organisation-f7d5d3cc77fc4d96b80d029c90c88d34.fifo"));
 
         cfg.ReceiveEndpoint("hmpps-co-financing-organisation-development-cfocats-dev_overnight_queue.fifo", e =>
         {
