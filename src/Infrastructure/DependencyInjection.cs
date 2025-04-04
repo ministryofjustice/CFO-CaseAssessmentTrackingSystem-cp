@@ -107,7 +107,7 @@ public static class DependencyInjection
             }
             else if(transport == "AmazonSqs")
             {
-                x.UsingAmazonSqs((context, cfg) => cfg.ConfigureAmazonSqs(context, "eu-west-2", settings => { /* Resolve automagically */ }));
+                x.UsingAmazonSqs((context, cfg) => cfg.ConfigureAmazonSqs(context, "eu-west-2"));
             }
             else
             {

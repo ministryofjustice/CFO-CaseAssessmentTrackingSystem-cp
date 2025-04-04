@@ -62,7 +62,7 @@ spec:
             - name: AWS__Bucket
               value: "$(S3_BUCKET_NAME)"
             - name: MassTransit__Transport
-              value: "InMemory"
+              value: "AmazonSqs"
               # Sentry
             - name: SENTRY__DSN
               value: $"(SENTRY_DSN)"
