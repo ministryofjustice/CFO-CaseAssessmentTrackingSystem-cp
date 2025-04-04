@@ -93,7 +93,7 @@ public static class DependencyInjection
 
         services.AddMassTransit(x =>
         {
-            x.AddConsumers(typeof(RecordEnrolmentPaymentConsumer).Assembly); // Automatically add all consumers
+            //x.AddConsumers(typeof(RecordEnrolmentPaymentConsumer).Assembly); // Automatically add all consumers
 
             var transport = configuration.GetRequiredSection<string>("MassTransit:Transport");
 
