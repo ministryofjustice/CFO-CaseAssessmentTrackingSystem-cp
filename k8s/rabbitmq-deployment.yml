@@ -14,6 +14,7 @@ spec:
       labels:
         app: rabbitmq # this should match the selector in service.yml
     spec:
+      serviceAccountName: ${NAMESPACE}
       containers:
         - name: rabbitmq
           image: rabbitmq:3-management
