@@ -55,11 +55,12 @@ jobs:
       
       - name: Generate Kubernetes Manifests
         run: |
-          cat k8s/rabbitmq-deployment.yml | envsubst > deploy/rabbitmq-deployment.yml
-          cat k8s/rabbitmq-service.yml | envsubst > deploy/rabbitmq-service.yml
-          cat k8s/cats-deployment.yml | envsubst > deploy/cats-deployment.yml
-          cat k8s/cats-ingress.yml | envsubst > deploy/cats-ingress.yml
-          cat k8s/cats-service.yml | envsubst > deploy/cats-service.yml
+          mkdir -p deploy
+          envsubst < k8s/rabbitmq-deployment.yml > deploy/rabbitmq-deployment.yml
+          envsubst < k8s/rabbitmq-service.yml > deploy/rabbitmq-service.yml
+          envsubst < k8s/cats-deployment.yml > deploy/cats-deployment.yml
+          envsubst < k8s/cats-ingress.yml > deploy/cats-ingress.yml
+          envsubst < k8s/cats-service.yml > deploy/cats-service.yml
         env:
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
