@@ -61,10 +61,18 @@ spec:
               value: "true"
             - name: AWS__Bucket
               value: "$(S3_BUCKET_NAME)"
+              # Rabbit
+            - name: RABBIT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: config
+                  key: RABBIT_USER
+            - name: RABBIT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: config
+                  key: RABBIT_PASS
             - name: MassTransit__Transport
-              value: "AmazonSqs"
-              # Sentry
-            - name: SENTRY__DSN
-              value: $"(SENTRY_DSN)"
-            - name: SENTRY__ENVIRONMENT
-              value: $"(NAMESPACE)"
+              value: "RabbitMq"
+            - name: ConnectionStrings__Redis
+              value: "amqp://$(RABBIT_USER):$(RABBIT_PASS)@rabbitmq:5672"
