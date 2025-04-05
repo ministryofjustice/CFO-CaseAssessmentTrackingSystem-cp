@@ -5,7 +5,7 @@ metadata:
   labels:
     app: cats
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: cats # this should match the selector in service.yml
@@ -46,33 +46,30 @@ spec:
                 secretKeyRef:
                   name: ec-cluster-output
                   key: auth_token
-            - name: S3_BUCKET_NAME
+            - name: AWS__Bucket
               valueFrom:
                 secretKeyRef:
                   name: s3-bucket-output
                   key: bucket_name
-            - name: DOTNET_ENVIRONMENT
-              value: "Development"
-            - name: ConnectionStrings__CatsDb
-              value: "Server=$(DATABASE_ADDRESS);Database=CatsDb;User Id=$(DATABASE_USERNAME);Password=$(DATABASE_PASSWORD);TrustServerCertificate=True;"
-            - name: ConnectionStrings__Redis
-              value: "$(REDIS_ADDRESS):6379,password=$(REDIS_AUTH_TOKEN),ssl=true"
-            - name: UseDummyCandidateService
-              value: "true"
-            - name: AWS__Bucket
-              value: "$(S3_BUCKET_NAME)"
-              # Rabbit
             - name: RABBIT_USER
               valueFrom:
                 secretKeyRef:
                   name: config
                   key: RABBIT_USER
             - name: RABBIT_PASS
+            - name: DOTNET_ENVIRONMENT
+              value: "Development"
+            - name: UseDummyCandidateService
+              value: "true"
+            - name: MassTransit__Transport
+              value: "RabbitMq"
+            - name: ConnectionStrings__CatsDb
+              value: "Server=$(DATABASE_ADDRESS);Database=CatsDb;User Id=$(DATABASE_USERNAME);Password=$(DATABASE_PASSWORD);TrustServerCertificate=True;"
+            - name: ConnectionStrings__Redis
+              value: "$(REDIS_ADDRESS):6379,password=$(REDIS_AUTH_TOKEN),ssl=true"
               valueFrom:
                 secretKeyRef:
                   name: config
                   key: RABBIT_PASS
-            - name: MassTransit__Transport
-              value: "RabbitMq"
             - name: ConnectionStrings__rabbit
-              value: "amqp://$(RABBIT_USER):$(RABBIT_PASS)@rabbitmq-service:5672"
+              value: "amqp://$(RABBIT_USER):$(RABBIT_PASS)@rabbitmq-service:5672" # amqp://<username>:<password>@<rabbit service name>:<port>
