@@ -55,11 +55,11 @@ jobs:
       
       - name: Generate Kubernetes Manifests
         run: |
-          cat k8s/rabbitmq-deployment.yml | envsubst > k8s/rabbitmq-deployment.yml
-          cat k8s/rabbitmq-service.yml | envsubst > k8s/rabbitmq-service.yml
-          cat k8s/cats-deployment.yml | envsubst > k8s/cats-deployment.yml
-          cat k8s/cats-ingress.yml | envsubst > k8s/cats-ingress.yml
-          cat k8s/cats-service.yml | envsubst > k8s/cats-service.yml
+          cat k8s/rabbitmq-deployment.yml | envsubst > deploy/rabbitmq-deployment.yml
+          cat k8s/rabbitmq-service.yml | envsubst > deploy/rabbitmq-service.yml
+          cat k8s/cats-deployment.yml | envsubst > deploy/cats-deployment.yml
+          cat k8s/cats-ingress.yml | envsubst > deploy/cats-ingress.yml
+          cat k8s/cats-service.yml | envsubst > deploy/cats-service.yml
         env:
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -73,7 +73,7 @@ jobs:
           kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
           kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
           kubectl config use-context ${KUBE_CLUSTER}
-          kubectl -n ${KUBE_NAMESPACE} apply -f k8s/
+          kubectl -n ${KUBE_NAMESPACE} apply -f deploy/
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
