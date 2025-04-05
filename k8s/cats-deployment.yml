@@ -75,4 +75,4 @@ spec:
             - name: MassTransit__Transport
               value: "RabbitMq"
             - name: ConnectionStrings__rabbit
-              value: "amqp://$(RABBIT_USER):$(RABBIT_PASS)@rabbitmq:5672"
+              value: "amqp://$(RABBIT_USER):$(RABBIT_PASS)@rabbitmq-service:5672"
