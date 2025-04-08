@@ -52,7 +52,11 @@ public class PublishOutboxMessagesJob(IUnitOfWork unitOfWork, ILogger<PublishOut
                         throw new ApplicationException("Unable to deserialize message content");
                     }
 
+                    logger.LogInformation($"Publishing '{messageType.Name}'...");
+
                     await bus.Publish(deserializedMessage, messageType);
+
+                    logger.LogInformation($"Published '{messageType.Name}'.");
 
                     outboxMessage.ProcessedOnUtc = DateTime.UtcNow;
                 }

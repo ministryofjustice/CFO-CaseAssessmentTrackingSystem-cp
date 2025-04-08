@@ -1,5 +1,6 @@
 using Amazon.Runtime;
 using Amazon.S3;
+using Amazon.SQS;
 using Cfo.Cats.Application.Common.Interfaces.Contracts;
 using Cfo.Cats.Application.Common.Interfaces.Locations;
 using Cfo.Cats.Application.Common.Interfaces.MultiTenant;
@@ -12,6 +13,8 @@ using Cfo.Cats.Application.SecurityConstants;
 using Cfo.Cats.Domain.Identity;
 using Cfo.Cats.Infrastructure.Configurations;
 using Cfo.Cats.Infrastructure.Constants.ClaimTypes;
+using Cfo.Cats.Infrastructure.Constants.Database;
+using Cfo.Cats.Infrastructure.Extensions;
 using Cfo.Cats.Infrastructure.Jobs;
 using Cfo.Cats.Infrastructure.Persistence.Interceptors;
 using Cfo.Cats.Infrastructure.Services.Candidates;
@@ -23,6 +26,7 @@ using Cfo.Cats.Infrastructure.Services.OffLoc;
 using Cfo.Cats.Infrastructure.Services.Ordnance;
 using Cfo.Cats.Infrastructure.Services.Serialization;
 using MassTransit;
+using MassTransit.AmazonSqsTransport.Configuration;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -61,6 +65,18 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
+        var options = configuration.GetAWSOptions();
+
+        string? accessKey = configuration.GetValue<string>("AWS:AccessKey");
+        string? secretKey = configuration.GetValue<string>("AWS:SecretKey");
+
+        if (string.IsNullOrEmpty(accessKey) is false && string.IsNullOrEmpty(secretKey) is false)
+        {
+            options.Credentials = new BasicAWSCredentials(accessKey, secretKey);
+        }
+
+        services.AddDefaultAWSOptions(options);
+
         services
             .Configure<IdentitySettings>(configuration.GetSection(IdentitySettings.Key))
             .AddSingleton(s => s.GetRequiredService<IOptions<IdentitySettings>>().Value)
@@ -84,72 +100,26 @@ public static class DependencyInjection
 
         services.AddMassTransit(x =>
         {
-            
             x.AddConsumers(typeof(RecordEnrolmentPaymentConsumer).Assembly); // Automatically add all consumers
 
-         
+            var transport = configuration.GetRequiredSection<string>("MassTransit:Transport");
 
-            if(configuration.GetConnectionString("rabbit")!.Equals("InMemory", StringComparison.CurrentCultureIgnoreCase))
+            if(transport == "InMemory")
             {
-                    x.UsingInMemory((context, cfg) =>
-                    {
-                        cfg.UseConcurrencyLimit(1); // all consumers should be limited to 1 unless otherwise specified
-
-                        cfg.ConfigureEndpoints(context);
-
-                        // Override for specific consumer with a custom concurrency limit
-                        cfg.ReceiveEndpoint("overnight-service", e =>
-                        {
-                            e.Consumer<SyncParticipantCommandHandler>(context, c =>
-                            {
-                                c.UseConcurrencyLimit(5); // Custom concurrency limit for this consumer
-                            });
-                        });
-
-
-                    });   
+                x.UsingInMemory((context, cfg) => cfg.ConfigureInMemory(context));
+            }
+            else if(transport == "RabbitMq")
+            {
+                x.UsingRabbitMq((context, cfg) => cfg.ConfigureRabbitMq(context, configuration.GetConnectionString("rabbit")!));
+            }
+            else if(transport == "AmazonSqs")
+            {
+                x.UsingAmazonSqs((context, cfg) => cfg.ConfigureAmazonSqs(context, "eu-west-2"));
             }
             else
             {
-                x.UsingRabbitMq((context, cfg) =>
-                {
-
-                    cfg.Host(configuration.GetConnectionString("rabbit"));
-
-                    cfg.ReceiveEndpoint("overnight-service", e =>
-                    {
-                        e.PrefetchCount = 64;
-                        e.ConcurrentMessageLimit = 5;
-                        e.ConfigureConsumer<SyncParticipantCommandHandler>(context);
-                    });
-
-                    cfg.ReceiveEndpoint("tasks-service", e =>
-                    {
-                        e.PrefetchCount = 64;
-                        e.ConcurrentMessageLimit = 5;
-
-                        e.ConfigureConsumer<PriTaskCompletedWatcherConsumer>(context);
-                        e.ConfigureConsumer<RaisePaymentsAfterApprovalConsumer>(context);
-                    });
-
-                    cfg.ReceiveEndpoint("payment-service", e =>
-                    {
-                        e.ConcurrentMessageLimit = 1;
-                        
-                        e.ConfigureConsumer<RecordActivityPaymentConsumer>(context);
-                        e.ConfigureConsumer<RecordEducationPayment>(context);
-                        e.ConfigureConsumer<RecordEmploymentPayment>(context);
-                        e.ConfigureConsumer<RecordEnrolmentPaymentConsumer>(context);
-                        e.ConfigureConsumer<RecordHubInductionPaymentConsumer>(context);
-                        e.ConfigureConsumer<RecordPreReleaseSupportPayment>(context);
-                        e.ConfigureConsumer<RecordThroughTheGatePaymentConsumer>(context);
-                        e.ConfigureConsumer<RecordWingInductionPaymentConsumer>(context);
-                        
-                    });
-
-                });
+                throw new ConfigurationException("Unsupported MassTransit transport type");
             }
-            
         });
 
         return services;
@@ -228,19 +198,20 @@ public static class DependencyInjection
 
         services.Configure<NotifyOptions>(configuration.GetSection(NotifyOptions.Notify));
 
-        if(configuration.GetSection("AWS") is {} section && section.Exists())
-        {
-            var options = configuration.GetAWSOptions();
-            options.Credentials = new BasicAWSCredentials(section.GetRequiredValue("AccessKey"), section.GetRequiredValue("SecretKey"));
-            services.AddDefaultAWSOptions(options);
-            services.AddAWSService<IAmazonS3>();            
-        }
+        services.AddAWSService<IAmazonS3>();
 
-        services.AddHttpClient<ICandidateService, CandidateService>((provider, client) =>
+        if(configuration.GetValue<bool>("UseDummyCandidateService"))
         {
-            client.DefaultRequestHeaders.Add("X-API-KEY", configuration.GetRequiredValue("DMS:ApiKey"));
-            client.BaseAddress = new Uri(configuration.GetRequiredValue("DMS:ApplicationUrl"));
-        });
+            services.AddSingleton<ICandidateService, DummyCandidateService>();
+        }
+        else
+        {
+            services.AddHttpClient<ICandidateService, CandidateService>((provider, client) =>
+            {
+                client.DefaultRequestHeaders.Add("X-API-KEY", configuration.GetRequiredValue("DMS:ApiKey"));
+                client.BaseAddress = new Uri(configuration.GetRequiredValue("DMS:ApplicationUrl"));
+            });
+        }
 
         services.AddHttpClient<OfflocService>((_, client) =>
         {
