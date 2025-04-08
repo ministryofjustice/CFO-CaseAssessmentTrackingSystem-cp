@@ -36,4 +36,9 @@ public class DummyCandidateService : ICandidateService
 
         return await Task.FromResult(results);
     }
+
+    public Task<bool> SetStickyLocation(string upci, string location)
+    {
+        return Task.FromResult(false);
+    }
 }
