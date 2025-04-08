@@ -62,13 +62,25 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
+        var options = configuration.GetAWSOptions();
+
+        string? accessKey = configuration.GetValue<string>("AWS:AccessKey");
+        string? secretKey = configuration.GetValue<string>("AWS:SecretKey");
+
+        if (string.IsNullOrEmpty(accessKey) is false && string.IsNullOrEmpty(secretKey) is false)
+        {
+            options.Credentials = new BasicAWSCredentials(accessKey, secretKey);
+        }
+
+        services.AddDefaultAWSOptions(options);
+
         services
             .Configure<IdentitySettings>(configuration.GetSection(IdentitySettings.Key))
             .AddSingleton(s => s.GetRequiredService<IOptions<IdentitySettings>>().Value)
             .AddSingleton<IIdentitySettings>(s =>
                 s.GetRequiredService<IOptions<IdentitySettings>>().Value
             );
-        
+
         services.Configure<AppConfigurationSettings>(configuration.GetSection(AppConfigurationSettings.Key))
             .AddSingleton(s => s.GetRequiredService<IOptions<AppConfigurationSettings>>().Value)
             .AddSingleton<IApplicationSettings>(s => s.GetRequiredService<IOptions<AppConfigurationSettings>>().Value);
@@ -85,30 +97,30 @@ public static class DependencyInjection
 
         services.AddMassTransit(x =>
         {
-            
+
             x.AddConsumers(typeof(RecordEnrolmentPaymentConsumer).Assembly); // Automatically add all consumers
 
-         
+
 
             if(configuration.GetConnectionString("rabbit")!.Equals("InMemory", StringComparison.CurrentCultureIgnoreCase))
             {
-                    x.UsingInMemory((context, cfg) =>
+                x.UsingInMemory((context, cfg) =>
+                {
+                    cfg.UseConcurrencyLimit(1); // all consumers should be limited to 1 unless otherwise specified
+
+                    cfg.ConfigureEndpoints(context);
+
+                    // Override for specific consumer with a custom concurrency limit
+                    cfg.ReceiveEndpoint("overnight-service", e =>
                     {
-                        cfg.UseConcurrencyLimit(1); // all consumers should be limited to 1 unless otherwise specified
-
-                        cfg.ConfigureEndpoints(context);
-
-                        // Override for specific consumer with a custom concurrency limit
-                        cfg.ReceiveEndpoint("overnight-service", e =>
+                        e.Consumer<SyncParticipantCommandHandler>(context, c =>
                         {
-                            e.Consumer<SyncParticipantCommandHandler>(context, c =>
-                            {
-                                c.UseConcurrencyLimit(5); // Custom concurrency limit for this consumer
-                            });
+                            c.UseConcurrencyLimit(5); // Custom concurrency limit for this consumer
                         });
+                    });
 
 
-                    });   
+                });
             }
             else
             {
@@ -136,7 +148,7 @@ public static class DependencyInjection
                     cfg.ReceiveEndpoint("payment-service", e =>
                     {
                         e.ConcurrentMessageLimit = 1;
-                        
+
                         e.ConfigureConsumer<RecordActivityPaymentConsumer>(context);
                         e.ConfigureConsumer<RecordEducationPayment>(context);
                         e.ConfigureConsumer<RecordEmploymentPayment>(context);
@@ -170,7 +182,7 @@ public static class DependencyInjection
 
                 });
             }
-            
+
         });
 
         return services;
@@ -181,14 +193,14 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
-        services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();        
+        services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
 
         services.AddDbContext<ApplicationDbContext>(
             (p, m) => {
                 m.AddInterceptors(p.GetServices<ISaveChangesInterceptor>());
                 m.UseSqlServer(configuration.GetConnectionString("CatsDb")!);
             });
-        
+
         services.AddDbContextFactory<ApplicationDbContext>((serviceProvider, optionsBuilder) =>
         {
             optionsBuilder.AddInterceptors(serviceProvider.GetServices<ISaveChangesInterceptor>());
@@ -201,7 +213,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
-        
+
         services.AddScoped<ApplicationDbContextInitializer>();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
@@ -245,23 +257,24 @@ public static class DependencyInjection
 
                 return new CachingContractService(cache, service, logger);
             });
-            
+
 
         services.Configure<NotifyOptions>(configuration.GetSection(NotifyOptions.Notify));
 
-        if(configuration.GetSection("AWS") is {} section && section.Exists())
-        {
-            var options = configuration.GetAWSOptions();
-            options.Credentials = new BasicAWSCredentials(section.GetRequiredValue("AccessKey"), section.GetRequiredValue("SecretKey"));
-            services.AddDefaultAWSOptions(options);
-            services.AddAWSService<IAmazonS3>();            
-        }
+        services.AddAWSService<IAmazonS3>();
 
-        services.AddHttpClient<ICandidateService, CandidateService>((provider, client) =>
+        if(configuration.GetValue<bool>("UseDummyCandidateService"))
         {
-            client.DefaultRequestHeaders.Add("X-API-KEY", configuration.GetRequiredValue("DMS:ApiKey"));
-            client.BaseAddress = new Uri(configuration.GetRequiredValue("DMS:ApplicationUrl"));
-        });
+            services.AddSingleton<ICandidateService, DummyCandidateService>();
+        }
+        else
+        {
+            services.AddHttpClient<ICandidateService, CandidateService>((provider, client) =>
+            {
+                client.DefaultRequestHeaders.Add("X-API-KEY", configuration.GetRequiredValue("DMS:ApiKey"));
+                client.BaseAddress = new Uri(configuration.GetRequiredValue("DMS:ApplicationUrl"));
+            });
+        }
 
         services.AddHttpClient<OfflocService>((_, client) =>
         {
@@ -274,7 +287,7 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.Add("X-API-KEY", configuration.GetRequiredValue("DMS:ApiKey"));
             client.BaseAddress = new Uri(configuration.GetRequiredValue("DMS:ApplicationUrl"));
         });
-        
+
         services.AddSingleton<IOfflocService>(sp =>
         {
             var offloc = sp.GetRequiredService<OfflocService>();
@@ -290,7 +303,7 @@ public static class DependencyInjection
 
             return new CachingDeliusService(cache, delius);
         });
-        
+
         services.AddHttpClient<IAddressLookupService, AddressLookupService>((provider, client) =>
         {
             client.DefaultRequestHeaders.Add("key", configuration.GetRequiredValue("Ordnance:Places:ApiKey"));
@@ -298,7 +311,7 @@ public static class DependencyInjection
         });
 
         services.AddQuartzJobsAndTriggers(configuration);
-        
+
         return services
             .AddSingleton<ISerializer, SystemTextJsonSerializer>()
             .AddScoped<ICurrentUserService, CurrentUserService>()
@@ -363,7 +376,7 @@ public static class DependencyInjection
                 options.AddPolicy(SecurityPolicies.Export, policy => {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
-                    policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAManager);                    
+                    policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAManager);
                 });
 
                 options.AddPolicy(SecurityPolicies.CandidateSearch, policy => {
@@ -385,39 +398,39 @@ public static class DependencyInjection
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
                     policy.RequireAuthenticatedUser();
                 });
-                
+
                 options.AddPolicy(SecurityPolicies.Import, policy => {
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
                     policy.RequireAuthenticatedUser();
                     policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAManager);
                 });
-                
+
                 options.AddPolicy(SecurityPolicies.SystemFunctionsRead, policy => {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
                     policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAManager, RoleNames.QAOfficer, RoleNames.QASupportManager);
                 });
-                
+
                 options.AddPolicy(SecurityPolicies.SystemFunctionsWrite, policy => {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
                     policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAManager, RoleNames.QAOfficer, RoleNames.QASupportManager);
                 });
-                
+
                 options.AddPolicy(SecurityPolicies.Pqa, policy =>
                 {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
                     policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAFinance);
                 });
-                
+
                 options.AddPolicy(SecurityPolicies.Qa1, policy =>
                 {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
                     policy.RequireRole(RoleNames.SystemSupport, RoleNames.SMT, RoleNames.QAManager, RoleNames.QAOfficer, RoleNames.QASupportManager);
                 });
-                
+
                 options.AddPolicy(SecurityPolicies.Qa2, policy =>
                 {
                     policy.RequireAuthenticatedUser();
@@ -448,9 +461,9 @@ public static class DependencyInjection
                 options.AddPolicy(SecurityPolicies.ViewAudit, policy => {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(ApplicationClaimTypes.AccountLocked, "False");
-                    policy.RequireRole(RoleNames.SystemSupport, 
-                        RoleNames.SMT, 
-                        RoleNames.QAManager 
+                    policy.RequireRole(RoleNames.SystemSupport,
+                        RoleNames.SMT,
+                        RoleNames.QAManager
                         );
                 });
 
@@ -507,10 +520,10 @@ public static class DependencyInjection
 
         services.AddQuartz(quartz =>
         {
-            if (options.GetSection(SyncParticipantsJob.Key.Name).Get<JobOptions>() is 
+            if (options.GetSection(SyncParticipantsJob.Key.Name).Get<JobOptions>() is
                 { Enabled: true } syncParticipantsJobOptions)
             {
-                quartz.AddJob<SyncParticipantsJob>(opts => 
+                quartz.AddJob<SyncParticipantsJob>(opts =>
                     opts.WithIdentity(SyncParticipantsJob.Key)
                         .WithDescription(SyncParticipantsJob.Description)
                 );
@@ -525,7 +538,7 @@ public static class DependencyInjection
             if (options.GetSection(DisableDormantAccountsJob.Key.Name).Get<JobOptions>() is
                 { Enabled: true } disableDormantAccountsJobOptions)
             {
-                quartz.AddJob<DisableDormantAccountsJob>(opts => 
+                quartz.AddJob<DisableDormantAccountsJob>(opts =>
                     opts.WithIdentity(DisableDormantAccountsJob.Key)
                         .WithDescription(DisableDormantAccountsJob.Description));
 
@@ -539,7 +552,7 @@ public static class DependencyInjection
             if (options.GetSection(NotifyAccountDeactivationJob.Key.Name).Get<JobOptions>() is
                 { Enabled: true } notifyAccountDeactivationJobOptions)
             {
-                quartz.AddJob<NotifyAccountDeactivationJob>(opts => 
+                quartz.AddJob<NotifyAccountDeactivationJob>(opts =>
                     opts.WithIdentity(NotifyAccountDeactivationJob.Key)
                         .WithDescription(NotifyAccountDeactivationJob.Description));
 
@@ -553,7 +566,7 @@ public static class DependencyInjection
             if (options.GetSection(PublishOutboxMessagesJob.Key.Name).Get<JobOptions>() is
                 { Enabled: true } publishOutboxMessagesOptions)
             {
-                quartz.AddJob<PublishOutboxMessagesJob>(opts => 
+                quartz.AddJob<PublishOutboxMessagesJob>(opts =>
                     opts.WithIdentity(PublishOutboxMessagesJob.Key)
                         .WithDescription(PublishOutboxMessagesJob.Description));
 
@@ -580,7 +593,7 @@ public static class DependencyInjection
 
     public static string GetRequiredValue(this IConfiguration configuration, string name) =>
         configuration[name] ?? throw new InvalidOperationException($"Configuration missing value for: {(configuration is IConfigurationSection s ? s.Path + ":" + name : name)}");
-    
+
     private static IServiceCollection AddFusionCacheService(this IServiceCollection services)
     {
         services.AddMemoryCache();
