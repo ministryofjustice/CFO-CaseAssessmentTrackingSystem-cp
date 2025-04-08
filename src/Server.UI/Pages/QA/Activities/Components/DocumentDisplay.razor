@@ -58,6 +58,7 @@
             else
             {
                 IsFileRejected = true;
+                Snackbar.Add(string.Join(',', result.Errors), Severity.Error);
             }
         }
     }
