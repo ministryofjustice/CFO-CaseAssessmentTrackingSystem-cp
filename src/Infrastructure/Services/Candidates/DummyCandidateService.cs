@@ -5,7 +5,7 @@ namespace Cfo.Cats.Infrastructure.Services.Candidates;
 
 public class DummyCandidateService : ICandidateService
 {
-    public async Task<CandidateDto?> GetByUpciAsync(string upci)
+    public async Task<Result<CandidateDto>> GetByUpciAsync(string upci)
     {
         var candidate = new CandidateDto 
         { 
@@ -20,25 +20,30 @@ public class DummyCandidateService : ICandidateService
             DateOfBirth = new DateTime(2000, 01, 01),
             NomisNumber = "A6952ZA",
             EstCode = "LPI",
-            RegistrationDetailsJson = "{}",
+            RegistrationDetailsJson = "[]",
             IsActive = true
         };
 
-        return await Task.FromResult(candidate);
+        var result = Result<CandidateDto>.Success(candidate);
+
+        return await Task.FromResult(result);
     }
 
-    public async Task<IEnumerable<SearchResult>?> SearchAsync(CandidateSearchQuery searchQuery)
+    public async Task<Result<SearchResult[]>> SearchAsync(CandidateSearchQuery searchQuery)
     {
-        List<SearchResult> results =
+        SearchResult[] results =
         [
             new SearchResult("1CFG5437L", 1)
         ];
 
-        return await Task.FromResult(results);
+        var result = Result<SearchResult[]>.Success(results);
+
+        return await Task.FromResult(result);
     }
 
-    public Task<bool> SetStickyLocation(string upci, string location)
+    public Task<Result<bool>> SetStickyLocation(string upci, string location)
     {
-        return Task.FromResult(false);
+        var result = Result<bool>.Success(false);
+        return Task.FromResult(result);
     }
 }

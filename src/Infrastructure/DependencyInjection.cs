@@ -1,6 +1,5 @@
 using Amazon.Runtime;
 using Amazon.S3;
-using Amazon.SQS;
 using Cfo.Cats.Application.Common.Interfaces.Contracts;
 using Cfo.Cats.Application.Common.Interfaces.Locations;
 using Cfo.Cats.Application.Common.Interfaces.MultiTenant;
@@ -26,7 +25,6 @@ using Cfo.Cats.Infrastructure.Services.OffLoc;
 using Cfo.Cats.Infrastructure.Services.Ordnance;
 using Cfo.Cats.Infrastructure.Services.Serialization;
 using MassTransit;
-using MassTransit.AmazonSqsTransport.Configuration;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -111,10 +109,6 @@ public static class DependencyInjection
             else if(transport == "RabbitMq")
             {
                 x.UsingRabbitMq((context, cfg) => cfg.ConfigureRabbitMq(context, configuration.GetConnectionString("rabbit")!));
-            }
-            else if(transport == "AmazonSqs")
-            {
-                x.UsingAmazonSqs((context, cfg) => cfg.ConfigureAmazonSqs(context, "eu-west-2"));
             }
             else
             {
