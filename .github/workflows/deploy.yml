@@ -58,7 +58,6 @@ jobs:
           mkdir -p deploy
           envsubst < k8s/rabbitmq-deployment.yml > deploy/rabbitmq-deployment.yml
           envsubst < k8s/rabbitmq-service.yml > deploy/rabbitmq-service.yml
-          envsubst < k8s/rabbitmq-ingress.yml > deploy/rabbitmq-ingress.yml
           envsubst < k8s/cats-deployment.yml > deploy/cats-deployment.yml
           envsubst < k8s/cats-ingress.yml > deploy/cats-ingress.yml
           envsubst < k8s/cats-service.yml > deploy/cats-service.yml
