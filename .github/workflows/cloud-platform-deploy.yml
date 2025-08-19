@@ -1,0 +1,64 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  ecr:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 #v4.0.2
+        with:
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.ECR_REGION }}
+      
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+
+      - name: Build and Publish Image
+        run: |
+          dotnet publish src/Server.UI/Server.UI.csproj \
+          --configuration Release \
+          --os linux \
+          --arch x64 \
+          --target:PublishContainer \
+          --property:ContainerRegistry=$REGISTRY \
+          --property:ContainerRepository=$REPOSITORY \
+          --property:ContainerImageTag=$IMAGE_TAG
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+      
+      - name: Generate artifacts with aspire
+        run: dotnet aspire publish -o aspire-output
+
+      - name: Deploy to Kubernetes
+        run: |
+          echo "${{ secrets.KUBE_CERT }}" > ca.crt
+          kubectl config set-cluster ${KUBE_CLUSTER} --certificate-authority=./ca.crt --server=https://${KUBE_CLUSTER}
+          kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
+          kubectl config use-context ${KUBE_CLUSTER}
+          helm upgrade --install aspire ./aspire-output --namespace ${KUBE_NAMESPACE} --set parameters.cats.cats_image=$IMAGE
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+          IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}

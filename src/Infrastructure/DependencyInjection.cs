@@ -71,6 +71,18 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
+        var options = configuration.GetAWSOptions();
+
+        string? accessKey = configuration.GetValue<string>("AWS:AccessKey");
+        string? secretKey = configuration.GetValue<string>("AWS:SecretKey");
+
+        if (string.IsNullOrEmpty(accessKey) is false && string.IsNullOrEmpty(secretKey) is false)
+        {
+            options.Credentials = new BasicAWSCredentials(accessKey, secretKey);
+        }
+
+        services.AddDefaultAWSOptions(options);
+
         services
             .Configure<IdentitySettings>(configuration.GetSection(IdentitySettings.Key))
             .AddSingleton(s => s.GetRequiredService<IOptions<IdentitySettings>>().Value)
